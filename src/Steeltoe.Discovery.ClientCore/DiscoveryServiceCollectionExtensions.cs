@@ -21,6 +21,7 @@ using Steeltoe.CloudFoundry.Connector.Services;
 using Steeltoe.Common.Discovery;
 using Steeltoe.Discovery.Eureka;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
@@ -108,6 +109,25 @@ namespace Steeltoe.Discovery.Client
             return services;
         }
 
+        public static IServiceCollection AddDiscoveryClient(this IServiceCollection services, IConfiguration config, IDiscoveryLifecycle lifecycle = null, Dictionary<string, string> metadataDict = null)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
+            IServiceInfo info = GetSingletonDiscoveryServiceInfo(config);
+
+            AddDiscoveryServices(services, info, config, lifecycle, metadataDict);
+
+            return services;
+        }
+
         public static IServiceCollection AddDiscoveryClient(this IServiceCollection services, IConfiguration config, string serviceName, IDiscoveryLifecycle lifecycle = null)
         {
             if (services == null)
@@ -132,7 +152,7 @@ namespace Steeltoe.Discovery.Client
             return services;
         }
 
-        private static void AddDiscoveryServices(IServiceCollection services, IServiceInfo info, IConfiguration config, IDiscoveryLifecycle lifecycle)
+        private static void AddDiscoveryServices(IServiceCollection services, IServiceInfo info, IConfiguration config, IDiscoveryLifecycle lifecycle, Dictionary<string, string> metadataDict = null)
         {
             var clientConfigsection = config.GetSection(EUREKA_PREFIX);
             int childCount = clientConfigsection.GetChildren().Count();
@@ -150,6 +170,7 @@ namespace Steeltoe.Discovery.Client
                 services.Configure<EurekaInstanceOptions>(instSection);
                 services.PostConfigure<EurekaInstanceOptions>((options) =>
                 {
+                    options.MetadataMap = metadataDict;
                     EurekaPostConfigurer.UpdateConfiguration(config, einfo, options);
                 });
                 AddEurekaServices(services, lifecycle);
